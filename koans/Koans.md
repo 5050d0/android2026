@@ -335,6 +335,27 @@ fun Shop.getProductsOrderedByAll(): Set<Product> =
 fun Customer.getOrderedProducts(): Set<Product> =
     this.orders.flatMap{it.products}.toSet()
 ```
+## [Compound tasks](https://play.kotlinlang.org/koans/Collections/Compound%20tasks/Task.kt)
+``` kotlin
+// Find the most expensive product among all the delivered products
+// ordered by the customer. Use `Order.isDelivered` flag.
+fun findMostExpensiveProductBy(customer: Customer): Product? {
+    return customer
+        .orders
+        .filter{it.isDelivered}
+        .flatMap{it.products}
+        .maxByOrNull{it.price}
+}
+
+// Count the amount of times a product was ordered.
+// Note that a customer may order the same product several times.
+fun Shop.getNumberOfTimesProductWasOrdered(product: Product): Int = this.customers.flatMap{
+    it.getOrderedProducts()
+}.count { it == product}
+
+fun Customer.getOrderedProducts(): List<Product> =
+        this.orders.flatMap{ it.products}
+```
 # [Properties](https://play.kotlinlang.org/koans/Properties/Properties/Task.kt)
 ## [Properties](https://play.kotlinlang.org/koans/Properties/Properties/Task.kt)
 ```kotlin
