@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.sosodo.convenientauthenticator.ui.theme.ConvenientAuthenticatorTheme
 
 class MainActivity : ComponentActivity() {
-    val TAG = "MainActivityLifecycle"
+    val tag = "MainActivityLifecycle"
 
 
     private val selectedEntry = mutableStateOf<Entry?>(null)
@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(TAG, "onCreate: savedInstanceState=${savedInstanceState}")
+        Log.i(tag, "onCreate: savedInstanceState=${savedInstanceState}")
         enableEdgeToEdge()
 
         if (savedInstanceState != null) {
@@ -73,37 +73,37 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        Log.i(TAG, "onStart")
+        Log.i(tag, "onStart")
     }
 
     override fun onResume() {
         super.onResume()
-        Log.i(TAG, "onResume")
+        Log.i(tag, "onResume")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.i(TAG, "onPause")
+        Log.i(tag, "onPause")
     }
 
     override fun onStop() {
         super.onStop()
-        Log.i(TAG, "onStop")
+        Log.i(tag, "onStop")
     }
 
     override fun onRestart() {
         super.onRestart()
-        Log.i(TAG, "onRestart")
+        Log.i(tag, "onRestart")
     }
 
     override fun onDestroy() {
-        Log.i(TAG, "onDestroy")
+        Log.i(tag, "onDestroy")
         super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.i(TAG, "onNewIntent")
+        Log.i(tag, "onNewIntent")
         setIntent(intent)
         handleLink(intent)
     }
@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        Log.i(TAG, "onSaveInstanceState")
+        Log.i(tag, "onSaveInstanceState")
         val entry = selectedEntry.value
 
         if (entry != null) {
@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreScreenState(state: Bundle) {
-        Log.i(TAG, "restoreScreenState")
+        Log.i(tag, "restoreScreenState")
         linkError.value = state.getString("link_error")
 
         val link = state.getString("entry_link") ?: return
