@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate: savedInstanceState=${savedInstanceState}")
+        Log.i(TAG, "onCreate: savedInstanceState=${savedInstanceState}")
         enableEdgeToEdge()
 
         if (savedInstanceState != null) {
@@ -73,37 +73,37 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        Log.d(TAG, "onStart")
+        Log.i(TAG, "onStart")
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume")
+        Log.i(TAG, "onResume")
     }
 
     override fun onPause() {
         super.onPause()
-        Log.d(TAG, "onPause")
+        Log.i(TAG, "onPause")
     }
 
     override fun onStop() {
         super.onStop()
-        Log.d(TAG, "onStop")
+        Log.i(TAG, "onStop")
     }
 
     override fun onRestart() {
         super.onRestart()
-        Log.d(TAG, "onRestart")
+        Log.i(TAG, "onRestart")
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy")
+        Log.i(TAG, "onDestroy")
         super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.d(TAG, "onNewIntent")
+        Log.i(TAG, "onNewIntent")
         setIntent(intent)
         handleLink(intent)
     }
@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        Log.d(TAG, "onSaveInstanceState")
+        Log.i(TAG, "onSaveInstanceState")
         val entry = selectedEntry.value
 
         if (entry != null) {
@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreScreenState(state: Bundle) {
-        Log.d(TAG, "restoreScreenState")
+        Log.i(TAG, "restoreScreenState")
         linkError.value = state.getString("link_error")
 
         val link = state.getString("entry_link") ?: return
