@@ -18,12 +18,12 @@ class Entry {
     var digits: Int = 6
 
     constructor(
-        secret: String,
+        secret: String = "SECRET",
         issuer: String,
         username: String,
-        period: Int,
-        hashAlgorithm: HashAlgorithm,
-        digits: Int
+        period: Int = 30,
+        hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA1,
+        digits: Int = 6
     ) {
         this.secret = secret
         this.issuer = issuer
