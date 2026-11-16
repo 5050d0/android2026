@@ -32,14 +32,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,11 +55,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sosodo.convenientauthenticator.ui.theme.ConvenientAuthenticatorTheme
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
+
+enum class AuthenticatorScreenState {
+    Loading,
+    Content,
+    Empty,
+    Error,
+}
 
 class MainActivity : ComponentActivity() {
     val tag = "MainActivityLifecycle"
@@ -73,7 +91,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ConvenientAuthenticatorTheme {
-                AuthenticatorScreen {}
+                AuthenticatorScreenContainer()
             }
 //            ConvenientAuthenticatorTheme {
 //                Scaffold(
@@ -314,9 +332,34 @@ fun TotpBlockPreview() {
 
 
 @Composable
+fun AuthenticatorScreenContainer() {
+    var state by rememberSaveable {
+        mutableStateOf(AuthenticatorScreenState.entries.random())
+    }
+
+    LaunchedEffect(state) {
+        if (state == AuthenticatorScreenState.Loading) {
+            delay(1.5.seconds)
+            state = listOf(
+                AuthenticatorScreenState.Content,
+                AuthenticatorScreenState.Empty,
+                AuthenticatorScreenState.Error,
+            ).random()
+        }
+    }
+
+    AuthenticatorScreen(
+        state = state,
+        onRetry = { state = AuthenticatorScreenState.Loading },
+    )
+}
+
+@Composable
 fun AuthenticatorScreen(
+    state: AuthenticatorScreenState = AuthenticatorScreenState.Content,
     onAdd: () -> Unit = {},
     onMenu: () -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
 
     val entries = listOf(
@@ -381,6 +424,18 @@ fun AuthenticatorScreen(
             }
         },
     ) { insets ->
+        if (state != AuthenticatorScreenState.Content) {
+            AuthenticatorStatusContent(
+                state = state,
+                onRetry = onRetry,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(insets)
+                    .padding(24.dp),
+            )
+            return@Scaffold
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -399,6 +454,55 @@ fun AuthenticatorScreen(
     }
 }
 
+@Composable
+private fun AuthenticatorStatusContent(
+    state: AuthenticatorScreenState,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+    ) {
+        when (state) {
+            AuthenticatorScreenState.Loading -> {
+                CircularProgressIndicator()
+                Text(
+                    text = stringResource(R.string.loading_entries),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            AuthenticatorScreenState.Empty -> {
+                Text(
+                    text = stringResource(R.string.no_entries),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                )
+                OutlinedButton(onClick = onRetry) {
+                    Text(stringResource(R.string.refresh))
+                }
+            }
+
+            AuthenticatorScreenState.Error -> {
+                Text(
+                    text = stringResource(R.string.load_entries_error),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                )
+                Button(onClick = onRetry) {
+                    Text(stringResource(R.string.retry))
+                }
+            }
+
+            AuthenticatorScreenState.Content -> Unit
+        }
+    }
+}
+
 @Preview(name = "Authenticator - Light", showBackground = true)
 @Preview(
     name = "Authenticator - Dark",
@@ -409,5 +513,29 @@ fun AuthenticatorScreen(
 fun AuthenticatorScreenPreview() {
     ConvenientAuthenticatorTheme(dynamicColor = false) {
         AuthenticatorScreen()
+    }
+}
+
+@Preview(name = "Authenticator - Loading", showBackground = true)
+@Composable
+fun AuthenticatorLoadingPreview() {
+    ConvenientAuthenticatorTheme(dynamicColor = false) {
+        AuthenticatorScreen(state = AuthenticatorScreenState.Loading)
+    }
+}
+
+@Preview(name = "Authenticator - Empty", showBackground = true)
+@Composable
+fun AuthenticatorEmptyPreview() {
+    ConvenientAuthenticatorTheme(dynamicColor = false) {
+        AuthenticatorScreen(state = AuthenticatorScreenState.Empty)
+    }
+}
+
+@Preview(name = "Authenticator - Error", showBackground = true)
+@Composable
+fun AuthenticatorErrorPreview() {
+    ConvenientAuthenticatorTheme(dynamicColor = false) {
+        AuthenticatorScreen(state = AuthenticatorScreenState.Error)
     }
 }
