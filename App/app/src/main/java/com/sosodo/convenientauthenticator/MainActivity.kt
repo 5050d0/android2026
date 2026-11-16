@@ -426,12 +426,15 @@ fun AuthenticatorScreen(
                     ),
             ) {
                 AuthenticatorAppBar(onAdd = onAdd, onMenu = onMenu)
-                GroupSelector(
-                    selectedGroup = selectedGroup,
-                    onGroupSelected = onGroupSelected,
-                )
+
             }
         },
+        bottomBar = {
+            GroupSelector(
+                selectedGroup = selectedGroup,
+                onGroupSelected = onGroupSelected,
+            )
+        }
     ) { insets ->
         if (displayState != AuthenticatorScreenState.Content) {
             AuthenticatorStatusContent(
@@ -512,7 +515,7 @@ private fun GroupSelector(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
         Row(
             modifier = Modifier
