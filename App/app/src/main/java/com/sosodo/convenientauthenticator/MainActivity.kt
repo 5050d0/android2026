@@ -16,17 +16,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,13 +48,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +66,23 @@ import androidx.compose.ui.unit.sp
 import com.sosodo.convenientauthenticator.ui.theme.ConvenientAuthenticatorTheme
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
+
+private val AccountGroups = listOf("All", "Personal", "Work", "Other")
+
+private val ExampleEntries = listOf(
+    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
+    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
+    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
+    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
+    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
+    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
+    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
+    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
+    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
+    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
+    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
+    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
+)
 
 enum class AuthenticatorScreenState {
     Loading,
@@ -233,11 +253,11 @@ fun Greeting(modifier: Modifier = Modifier) {
 @Composable
 fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -> Unit) {
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(96.dp),
+            .heightIn(min = 96.dp),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
         Row(
             modifier = Modifier.padding(4.dp),
@@ -247,12 +267,12 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                 modifier = Modifier
                     .size(86.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = entry.issuer.take(1).uppercase(),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -266,7 +286,7 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(28.dp),
+                        .heightIn(min = 28.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -289,12 +309,16 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                 }
 
                 Text(
-                    text = entry.getCode().toString(),
+                    text = entry.getCode().toString()
+                        .padStart(entry.digits, '0')
+                        .chunked(3)
+                        .joinToString(" "),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 57.sp,
                     lineHeight = 58.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
+                    softWrap = false,
                     style = TextStyle(
                         platformStyle = PlatformTextStyle(
                             includeFontPadding = false,
@@ -336,6 +360,7 @@ fun AuthenticatorScreenContainer() {
     var state by rememberSaveable {
         mutableStateOf(AuthenticatorScreenState.entries.random())
     }
+    var selectedGroup by rememberSaveable { mutableStateOf("All") }
 
     LaunchedEffect(state) {
         if (state == AuthenticatorScreenState.Loading) {
@@ -350,6 +375,8 @@ fun AuthenticatorScreenContainer() {
 
     AuthenticatorScreen(
         state = state,
+        selectedGroup = selectedGroup,
+        onGroupSelected = { selectedGroup = it },
         onRetry = { state = AuthenticatorScreenState.Loading },
     )
 }
@@ -357,80 +384,50 @@ fun AuthenticatorScreenContainer() {
 @Composable
 fun AuthenticatorScreen(
     state: AuthenticatorScreenState = AuthenticatorScreenState.Content,
+    entries: List<Entry> = ExampleEntries,
+    selectedGroup: String = "All",
+    onGroupSelected: (String) -> Unit = {},
     onAdd: () -> Unit = {},
     onMenu: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) {
 
-    val entries = listOf(
-        Entry(issuer = "Google", username = "example@gmail.com"),
-        Entry(issuer = "Yandex", username = "example2@ya.ru"),
-        Entry(issuer = "Github", username = "example@gmail.com"),
-        Entry(issuer = "Google", username = "example@gmail.com"),
-        Entry(issuer = "Yandex", username = "example2@ya.ru"),
-        Entry(issuer = "Github", username = "example@gmail.com"),
-        Entry(issuer = "Google", username = "example@gmail.com"),
-        Entry(issuer = "Yandex", username = "example2@ya.ru"),
-        Entry(issuer = "Github", username = "example@gmail.com"),
-        Entry(issuer = "Google", username = "example@gmail.com"),
-        Entry(issuer = "Yandex", username = "example2@ya.ru"),
-        Entry(issuer = "Github", username = "example@gmail.com"),
-    )
+    val filteredEntries = entries.filter { entry ->
+        selectedGroup == "All" || entry.group == selectedGroup
+    }
+    val displayState = if (
+        state == AuthenticatorScreenState.Content && filteredEntries.isEmpty()
+    ) AuthenticatorScreenState.Empty else state
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            Surface(color = MaterialTheme.colorScheme.surface) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(
-                            WindowInsets.statusBars.only(
-                                WindowInsetsSides.Top +
-                                        WindowInsetsSides.Horizontal
-                            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
                         )
-                        .height(64.dp)
-                        .padding(start = 16.dp, end = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Convenient Authenticator",
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 22.sp,
-                        lineHeight = 28.sp,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                    IconButton(onClick = onAdd) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.add_entry),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    IconButton(onClick = onMenu) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.more_options),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                    ),
+            ) {
+                AuthenticatorAppBar(onAdd = onAdd, onMenu = onMenu)
+                GroupSelector(
+                    selectedGroup = selectedGroup,
+                    onGroupSelected = onGroupSelected,
+                )
             }
         },
     ) { insets ->
-        if (state != AuthenticatorScreenState.Content) {
+        if (displayState != AuthenticatorScreenState.Content) {
             AuthenticatorStatusContent(
-                state = state,
+                state = displayState,
                 onRetry = onRetry,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(insets)
+                    .consumeWindowInsets(insets)
                     .padding(24.dp),
             )
             return@Scaffold
@@ -439,7 +436,8 @@ fun AuthenticatorScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(insets),
+                .padding(insets)
+                .consumeWindowInsets(insets),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
@@ -447,8 +445,99 @@ fun AuthenticatorScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            items(entries, key = { it.uuid }) { entry ->
+            items(filteredEntries, key = { it.uuid }) { entry ->
                 TotpBlock(entry, shareEntry = {})
+            }
+        }
+    }
+}
+
+@Composable
+private fun AuthenticatorAppBar(
+    onAdd: () -> Unit,
+    onMenu: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.app_name),
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        IconButton(onClick = onAdd, modifier = Modifier.size(48.dp)) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add_entry),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        IconButton(onClick = onMenu, modifier = Modifier.size(48.dp)) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = stringResource(R.string.more_options),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupSelector(
+    selectedGroup: String,
+    onGroupSelected: (String) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(4.dp)
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            AccountGroups.forEach { group ->
+                val selected = group == selectedGroup
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainer
+                        )
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onGroupSelected(group) },
+                        )
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = group,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -505,6 +594,12 @@ private fun AuthenticatorStatusContent(
 
 @Preview(name = "Authenticator - Light", showBackground = true)
 @Preview(
+    name = "Authenticator - 150% text",
+    showBackground = true,
+    widthDp = 360,
+    fontScale = 1.5f,
+)
+@Preview(
     name = "Authenticator - Dark",
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
@@ -513,6 +608,14 @@ private fun AuthenticatorStatusContent(
 fun AuthenticatorScreenPreview() {
     ConvenientAuthenticatorTheme(dynamicColor = false) {
         AuthenticatorScreen()
+    }
+}
+
+@Preview(name = "Authenticator - Work", showBackground = true)
+@Composable
+fun AuthenticatorWorkPreview() {
+    ConvenientAuthenticatorTheme(dynamicColor = false) {
+        AuthenticatorScreen(selectedGroup = "Work")
     }
 }
 
