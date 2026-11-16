@@ -7,4 +7,9 @@
     <string name="load_entries_error">Не удалось загрузить записи</string>
     <string name="refresh">Обновить</string>
     <string name="retry">Повторить</string>
+    <string name="add_account_title">Добавить аккаунт</string>
+    <string name="authenticator_link">Ссылка аутентификатора</string>
+    <string name="invalid_authenticator_link">Введите корректную ссылку otpauth://totp/ с именем аккаунта и секретным ключом</string>
+    <string name="add">Добавить</string>
+    <string name="cancel">Отмена</string>
 </resources>

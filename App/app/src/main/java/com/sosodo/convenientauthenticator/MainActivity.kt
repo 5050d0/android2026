@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,14 +56,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sosodo.convenientauthenticator.ui.theme.ConvenientAuthenticatorTheme
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -74,14 +71,22 @@ private val ExampleEntries = listOf(
     Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
     Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
     Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
-    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
-    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
-    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
-    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
-    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
-    Entry(issuer = "Google", username = "example@gmail.com", group = "Personal"),
-    Entry(issuer = "Yandex", username = "example2@ya.ru", group = "Other"),
-    Entry(issuer = "Github", username = "example@gmail.com", group = "Work"),
+)
+
+private val EntriesSaver = listSaver<List<Entry>, String>(
+    save = { entries ->
+        entries.flatMap { entry ->
+            listOf(entry.uuid.toString(), entry.group, generateOtpAuthLink(entry))
+        }
+    },
+    restore = { saved ->
+        saved.chunked(3).map { (uuid, group, link) ->
+            requireNotNull(parseOtpAuthLink(link)).apply {
+                this.uuid = java.util.UUID.fromString(uuid)
+                this.group = group
+            }
+        }
+    },
 )
 
 enum class AuthenticatorScreenState {
@@ -273,8 +278,7 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                 Text(
                     text = entry.issuer.take(1).uppercase(),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.displaySmall,
                 )
             }
 
@@ -293,16 +297,14 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                     Text(
                         text = entry.issuer,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 22.sp,
-                        lineHeight = 28.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                     )
                     Text(
                         text = entry.username,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -314,16 +316,9 @@ fun TotpBlock(entry: Entry, modifier: Modifier = Modifier, shareEntry: (Entry) -
                         .chunked(3)
                         .joinToString(" "),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 57.sp,
-                    lineHeight = 58.sp,
-                    fontWeight = FontWeight.Normal,
+                    style = MaterialTheme.typography.displayLarge,
                     maxLines = 1,
                     softWrap = false,
-                    style = TextStyle(
-                        platformStyle = PlatformTextStyle(
-                            includeFontPadding = false,
-                        ),
-                    ),
                 )
             }
         }
@@ -361,6 +356,10 @@ fun AuthenticatorScreenContainer() {
         mutableStateOf(AuthenticatorScreenState.entries.random())
     }
     var selectedGroup by rememberSaveable { mutableStateOf("All") }
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    var entries by rememberSaveable(stateSaver = EntriesSaver) {
+        mutableStateOf(ExampleEntries)
+    }
 
     LaunchedEffect(state) {
         if (state == AuthenticatorScreenState.Loading) {
@@ -375,10 +374,24 @@ fun AuthenticatorScreenContainer() {
 
     AuthenticatorScreen(
         state = state,
+        entries = entries,
         selectedGroup = selectedGroup,
         onGroupSelected = { selectedGroup = it },
+        onAdd = { showAddDialog = true },
         onRetry = { state = AuthenticatorScreenState.Loading },
     )
+
+    if (showAddDialog) {
+        AddEntryDialog(
+            onDismiss = { showAddDialog = false },
+            onAdd = { entry ->
+                entry.group = if (selectedGroup == "All") "Other" else selectedGroup
+                entries = listOf(entry) + entries
+                state = AuthenticatorScreenState.Content
+                showAddDialog = false
+            },
+        )
+    }
 }
 
 @Composable
