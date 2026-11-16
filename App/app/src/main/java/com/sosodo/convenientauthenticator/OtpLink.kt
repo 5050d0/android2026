@@ -37,7 +37,7 @@ fun parseOtpAuthLink(link: String): Entry? {
 
     if (period <= 0) return null
 
-    val secret = uri.getQueryParameter("secret") ?: return null
+    val secret = uri.getQueryParameter("secret")?.takeIf { it.isNotBlank() } ?: return null
 
 
     val label = uri.path.orEmpty().removePrefix("/")

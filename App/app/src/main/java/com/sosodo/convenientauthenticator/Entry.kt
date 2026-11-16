@@ -16,14 +16,16 @@ class Entry {
     var hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA1
     var period: Int = 30
     var digits: Int = 6
+    var group: String = ""
 
     constructor(
-        secret: String,
+        secret: String = "SECRET",
         issuer: String,
         username: String,
-        period: Int,
-        hashAlgorithm: HashAlgorithm,
-        digits: Int
+        period: Int = 30,
+        hashAlgorithm: HashAlgorithm = HashAlgorithm.SHA1,
+        digits: Int = 6,
+        group: String = "",
     ) {
         this.secret = secret
         this.issuer = issuer
@@ -31,6 +33,7 @@ class Entry {
         this.period = period
         this.hashAlgorithm = hashAlgorithm
         this.digits = digits
+        this.group = group
     }
 
 
